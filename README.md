@@ -108,7 +108,7 @@ I verified that my perspective transform was working as expected by drawing the 
 
 The final image of the selction  pipeline looks like this:
 
-![alt text] [image16]
+![alt text][image16]
 #### 4. Line object
 The methods for identifying and fitting pixels to a polynomial curve can be found in the notebook under
 
