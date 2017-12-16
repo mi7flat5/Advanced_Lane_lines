@@ -141,13 +141,14 @@ This code can be found in lines 257 - 259 in Pipeline.py
 
 #### Here is the result for the project video:
 
-Here's the [project video result](./output_images/Fianl1.mp4)
- [Youtube](https://youtu.be/2EG7aCboAAw)
- 
+Here's the [project video result](./output_images/Fianl1.mp4)<br>
+ [Project video Youtube link](https://youtu.be/2EG7aCboAAw)
+---
+--- 
 #### Here is the result for the challenge video:
 
-Here's the [challenge video result](./output_images/challenge1.mp4)
- [Youtube](https://youtu.be/-Rnfal1ogkw)
+Here's the [challenge video result](./output_images/challenge1.mp4)<br>
+ [Challenge video Youtube link](https://youtu.be/-Rnfal1ogkw)
 ---
 
 ### Discussion
