@@ -2,30 +2,32 @@ import numpy as np
 import cv2
 import matplotlib.image as mpimg
 import pickle
+import matplotlib.pyplot as plt
 from moviepy.editor import VideoFileClip
 
+# Load distortion correction coefficents from pickle -- created in notebook
 dist_pickle = pickle.load( open( "camera_cal/wide_dist_pickle.p", "rb" ) )
 mtx = dist_pickle["mtx"]
 dist = dist_pickle["dist"]
 
 
-image = mpimg.imread('test_images/straight_lines1.jpg')
-img_size = (image.shape[1], image.shape[0])
+img_shape3 = mpimg.imread('test_images/90.jpg').shape
+img_size = (img_shape3[1], img_shape3[0])
+
+# source and destination coridinates for warp perspective
 src = np.float32(
     [[(img_size[0] / 2) - 60, img_size[1] / 2 + 100],
      [((img_size[0] / 6) - 10), img_size[1]],
      [(img_size[0] * 5 / 6) + 60, img_size[1]],
      [(img_size[0] / 2 + 65), img_size[1] / 2 + 100]])
 
-# For destination points, I'm arbitrarily choosing some points to be
-# a nice fit for displaying our warped result
-# again, not exact, but close enough for our purposes
 dst = np.float32(
     [[(img_size[0] / 4), 0],
      [(img_size[0] / 4), img_size[1]],
      [(img_size[0] * 3 / 4), img_size[1]],
      [(img_size[0] * 3 / 4), 0]])
 
+# Inverse warp matrix, returns warp to regular perspective
 Minv = cv2.getPerspectiveTransform(dst, src)
 
 def perspective(img, src, dst, mtx, dist):
@@ -33,7 +35,6 @@ def perspective(img, src, dst, mtx, dist):
     undist = cv2.undistort(img, mtx, dist, None, mtx)
     M = cv2.getPerspectiveTransform(src, dst)
     # Warp the image using OpenCV warpPerspective()
-
     return cv2.warpPerspective(undist, M, img_size, flags=cv2.INTER_LINEAR)
 
 
@@ -106,45 +107,110 @@ def dir_threshold(img, sobel_kernel=3, thresh=(0, np.pi/2)):
     binary_output[(absgraddir >= thresh[0]) & (absgraddir <= thresh[1])] = 1
     return binary_output
 
+# COLOR SELECTION - Yellow and White
+def c_f(img, rgb_thresh=(205, 205, 125)):
+    # Create an array of zeros same xy size as img, but single channel
+    color_select = np.zeros_like(img[:,:,0])
+    # Require that each pixel be above all three threshold values in RGB
+    # above_thresh will now contain a boolean array with "True"
+    # where threshold was met
+    above_thresh = (img[:,:,0] < rgb_thresh[0]) \
+                & (img[:,:,1] < rgb_thresh[1]) \
+                & (img[:,:,2] < rgb_thresh[2])
+    # Index the array of zeros with the boolean array and set to 1
+    color_select[above_thresh] = 1
+    # Return the binary image
+    return color_select
+
+def b_f(img, rgb_thresh=(155, 145, 20)):
+    # Create an array of zeros same xy size as img, but single channel
+    color_select = np.zeros_like(img[:,:,0])
+    # Require that each pixel be above all three threshold values in RGB
+    # above_thresh will now contain a boolean array with "True"
+    # where threshold was met
+    above_thresh = (img[:,:,0] > rgb_thresh[0]) \
+                & (img[:,:,1] > rgb_thresh[1]) \
+                & (img[:,:,2] > rgb_thresh[2])
+    # Index the array of zeros with the boolean array and set to 1
+    color_select[above_thresh] = 1
+    # Return the binary image
+    return color_select & c_f(img)
+
+def color_thresh(img, rgb_thresh=(190, 190, 190)):
+    # Create an array of zeros same xy size as img, but single channel
+    img = region_of_interest(img)
+    color_select = np.zeros_like(img[:,:,0])
+    # Require that each pixel be above all three threshold values in RGB
+    # above_thresh will now contain a boolean array with "True"
+    # where threshold was met
+    above_thresh = (img[:,:,0] > rgb_thresh[0]) \
+                & (img[:,:,1] > rgb_thresh[1]) \
+                & (img[:,:,2] > rgb_thresh[2])
+    # Index the array of zeros with the boolean array and set to 1
+    color_select[above_thresh] = 1
+    # Return the binary image
+    return  color_select | b_f(img)
+
+# Combine color selection and edge detection
 def edges(im):
-    ksize = 5 # Choose a larger odd number to smooth gradient measurements
-    im = np.copy(im)
-    gradx = abs_sobel_thresh(im, orient='x', sobel_kernel=ksize, thresh=(10, 255))
-    grady = abs_sobel_thresh(im, orient='y', sobel_kernel=ksize, thresh=(20, 255))
-    mag_binary = mag_thresh(im, sobel_kernel=ksize, mag_thresh=(130,255))
-    dir_binary = dir_threshold(im, sobel_kernel=ksize, thresh=(.8, 1.2))
+    # im = region_of_interest(im)
+    ksize = 3  # Choose a larger odd number to smooth gradient measurements
 
-    combined = np.zeros_like(dir_binary)
-    combined[((gradx == 1) | (grady == 1))|((mag_binary == 1) & (dir_binary == 1))] = 1
-    #
-    return combined
+    gradx = abs_sobel_thresh(im, orient='x', sobel_kernel=ksize, thresh=(100, 155))
+    grady = abs_sobel_thresh(im, orient='y', sobel_kernel=ksize, thresh=(100,152))
+    mag_binary = mag_thresh(im, sobel_kernel=ksize, mag_thresh=(120,200))
+    dir_binary = dir_threshold(im, sobel_kernel=ksize, thresh=(.7, 1.3))
+
+    combined = np.zeros_like(dir_binary).astype(np.uint8)
+    thing = color_thresh(im).astype(np.uint8)
+
+    mask = ((gradx == 1)|(grady == 1)) & ((mag_binary == 1) & (dir_binary == 1))
+
+    combined[mask] = 1
+    combined = region_of_interest(combined).astype(np.uint8)
+    return np.logical_or(combined , thing).astype(np.float32)
 
 
+# Saturation selection
 def hls_select(img, thresh=(90, 255)):
     # 1) Convert to HLS color space
     # 2) Apply a threshold to the S channel
     # 3) Return a binary image of threshold result
-    img = np.copy(img)  # placeholder line
+
+    img = region_of_interest(img)
     hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
     s_channel = hls[:, :, 2]
 
-    thresh_min = 170
-    thresh_max = 255
-    s_output = np.zeros_like(s_channel)
-    s_output[(s_channel > thresh_min) & (s_channel <= thresh_max)] = 1
+    sthresh_min = 110
+    sthresh_max = 225
+    s_output = np.zeros_like(s_channel).astype(np.uint8)
+    s_output[(s_channel > sthresh_min) & (s_channel <= sthresh_max)] = 1
+    return  s_output
 
-    hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HLS).astype(np.float)
 
-    l_channel = hsv[:, :, 1]
+# Image Masking
+def region_of_interest(img):
+    imshape = img.shape
+    vertices = np.array([[(150, imshape[0]),
+                          (imshape[1] / 2 + 50, imshape[0] / 2 + 40),
+                          (imshape[1] / 2 + 50, imshape[0] / 2 + 40),
+                          (imshape[1] - 50, imshape[0])]], dtype=np.int32)
+    # defining a blank mask to start with
+    mask = np.zeros_like(img)
 
-    thresh_min = 100
-    thresh_max = 250
-    l_output = np.zeros_like(l_channel)
-    l_output[(l_channel > thresh_min) & (l_channel <= thresh_max)] = 1
+    # defining a 3 channel or 1 channel color to fill the mask with depending on the input image
+    if len(img.shape) > 2:
+        channel_count = img.shape[2]  # i.e. 3 or 4 depending on your image
+        ignore_mask_color = (255,) * channel_count
+    else:
+        ignore_mask_color = 255
 
-    #return s_output
-    return np.logical_and(l_output, s_output, dtype=np.float32)
+    # filling pixels inside the polygon defined by "vertices" with the fill color
+    cv2.fillPoly(mask, vertices, ignore_mask_color)
 
+    # returning the image only where mask pixels are nonzero
+    masked_image = cv2.bitwise_and(img, mask)
+    return masked_image
 
 class Line():
     def __init__(self, side='left', ):
@@ -157,11 +223,12 @@ class Line():
         ## NEED OUTSIDE
         self.bestx = None
         # polynomial coefficients averaged over the last n iterations
-        self.best_fit = None
+        self.best_fit = [np.array([0.0,0.0,0.0])]
+        self.best_fit_avg = 0
         # polynomial coefficients for the most recent fit
         self.current_fit = [np.array([False])]
         # radius of curvature of the line in some units
-        self.radius_of_curvature = None
+        self.radius_of_curvature = [[0]]
         # distance in meters of vehicle center from the line
         self.line_base_pos = None
         # difference in fit coefficients between last and new fits
@@ -172,44 +239,69 @@ class Line():
         self.ally = None
         # RIGHT LINE NEEDS MIDPOINT SET
         self.midpoint = 0
+        self.last_fit = None
         ## NEED OUTSIDE
         self.ploty = None
-        self.avg_pool = 4
+        self.avg_pool = 3
+        self.maxrad =0
+        self.minrad =0
+        self.avgrad =0
+        self.other_fit = None
 
     def test_fit(self, fit,ploty):
         y_eval = np.max(ploty)
 
-
-
-
-        curverad = ((1 + (2 * fit[0] * y_eval + fit[1]) ** 2) ** 1.5) / np.absolute(2 * fit[0])
-
-
         ym_per_pix = 30 / 720  # meters per pixel in y dimension
         xm_per_pix = 3.7 / 700  # meters per pixel in x dimension
 
+        # Calculate the radius of curve in meters
         fit_cr = np.polyfit(self.ally * ym_per_pix, self.allx * xm_per_pix, 2)
         curverad = ((1 + (2 * fit_cr[0] * y_eval * ym_per_pix + fit_cr[1]) ** 2) ** 1.5) / np.absolute(2 * fit_cr[0])
-        print(curverad)
-        # if fail return false, set self.detected = False
-        # if curverad < 10:
-        #     self.detected = False
-        #     return False
-
         self.detected = True
-        self.update_fit(fit)
-        # print(np.abs(np.mean(fit)))
-        # print('.')
-        # print(np.mean(self.best_fit))
+
+        # udate metrics for curve radius
+        if curverad < 3000:
+            self.radius_of_curvature.append(curverad)
+            self.minrad = np.min(self.radius_of_curvature)
+            self.maxrad = np.max(self.radius_of_curvature)
+            self.radius_of_curvature.append(curverad)
+            self.avgrad = np.mean(self.radius_of_curvature)
+
+        # First few frames self.current_fit will be None
+        if len(self.current_fit) ==1:
+            self.best_fit = np.mean(fit)
+            self.last_fit = fit
+
+        # Tests for fits that are not similar to current best fit.
+        if np.abs(np.mean(self.best_fit)- np.mean(fit))>200:
+            self.detected = False
+        if np.mean(fit) <0 :
+            self.detected = False
+
+        # Tests curve radius for erroneous results
+        if curverad > 2000:
+            self.detected = False
+        if curverad < 100:
+            self.detected = False
+
+        # only update with new fit if all tests passed
+        # otherwise use last good fit as update value
+        if self.detected:
+            self.update_fit(fit)
+        else:
+            self.update_fit(self.last_fit)
+
+        # Update pixel indices
         self.ploty = ploty
         fitx = self.best_fit[0] * ploty ** 2 + self.best_fit[1] * ploty + self.best_fit[2]
         self.update_xfitted(fitx)
+
         return True
 
     def update_xfitted(self, newx):
 
+        # keep a running average of known good indices
         self.recent_xfitted.insert(0,[newx])
-
         if len(self.recent_xfitted)> self.avg_pool:
             self.bestx = np.mean(self.recent_xfitted, axis=0)
             self.recent_xfitted.pop()
@@ -217,17 +309,20 @@ class Line():
             self.bestx = newx
 
 
+
     def update_fit(self, fit):
 
+        # Keep running average of known good fits
+        self.last_fit = fit
         self.current_fit.insert(0,fit)
-
-        if len(self.current_fit)> self.avg_pool-2:
+        if len(self.current_fit)> self.avg_pool:
             self.best_fit = np.mean(self.current_fit, axis=0)
             self.current_fit.pop()
-        #else:
-        self.best_fit = fit
+        else:
+            self.best_fit = fit
 
     def process_line(self, bin_img):
+
         nonzero = bin_img.nonzero()
         nonzeroy = np.array(nonzero[0])
         nonzerox = np.array(nonzero[1])
@@ -238,17 +333,23 @@ class Line():
                                            self.best_fit[2] - margin)) & (nonzerox < (self.best_fit[0] * (nonzeroy ** 2) +
                                            self.best_fit[1] * nonzeroy + self.best_fit[2] + margin)))
 
+
             self.allx = nonzerox[left_lane_inds]
             self.ally = nonzeroy[left_lane_inds]
+            # Test that there are enough pixels to fit polynomial
+            if len(self.allx)<50:
+                self.detected = False
+            if len(self.ally)< 50:
+                self.detected = False
+            if self.detected:
+                fit = np.polyfit(self.ally, self.allx, 2)
+                # test fit, curve, set detected false and return if out of whack
+                ploty = np.linspace(0, bin_img.shape[0] - 1, bin_img.shape[0])
+                self.test_fit(fit, ploty)
 
-            fit = np.polyfit(self.ally, self.allx, 2)
-            # test fit, curve, set detected false and return if out of whack
-            ploty = np.linspace(0, bin_img.shape[0] - 1, bin_img.shape[0])
-            self.test_fit(fit, ploty)
-
-        elif not self.detected:
+        if not self.detected:
             histogram = np.sum(bin_img[bin_img.shape[0] // 2:, :], axis=0)
-            histogram[:250] = 0
+            histogram[:200] = 0
             histogram[500:900] = 0
             histogram[1100:] = 0
 
@@ -257,8 +358,13 @@ class Line():
             if self.side == 'right':
                 self.midpoint = midpoint = np.int(histogram.shape[0] / 2)
             self.line_base_pos = np.argmax(histogram[self.midpoint:]) + self.midpoint
-            x_current = self.line_base_pos
 
+            # test position of line base, set appropriately if erroneous
+            if self.side == 'left' and self.line_base_pos > 500:
+                self.line_base_pos = 400
+            if self.side == 'right' and self.line_base_pos > 950:
+                self.line_base_pos = 1000
+            x_current = self.line_base_pos
 
             lane_inds = []
 
@@ -268,7 +374,7 @@ class Line():
             # Step through the windows one by one
             window_height = np.int(bin_img.shape[0] / nwindows)
 
-
+            # Search image for pixels for polynomial fit
             for window in range(nwindows):
                 # Identify window boundaries in x and y (and right and left)
                 win_y_low = bin_img.shape[0] - (window + 1) * window_height
@@ -291,6 +397,10 @@ class Line():
             lane_inds = np.concatenate(lane_inds)
             self.allx = nonzerox[lane_inds]
             self.ally = nonzeroy[lane_inds]
+            if len(self.allx)<10:
+                return
+            if len(self.ally)< 10:
+                return
 
             fit = np.polyfit(self.ally, self.allx, 2)
             ploty = np.linspace(0, bin_img.shape[0] - 1, bin_img.shape[0])
@@ -298,25 +408,39 @@ class Line():
 
 left_line = Line('left')
 right_line = Line('right')
-
+frame_num = 0
 
 def pipeline(img):
-    # Gradient Threshold
+    # Combination of gradient and color thresholding
     sxbinary = edges(img)
 
-    # Threshold color channel
+    # Threshold saturation channel from HLS color space
     s_binary = hls_select(img)
 
     # Combine the two binary thresholds
-    combined_binary = np.zeros_like(sxbinary)
-    combined_binary[(s_binary == 1) | (sxbinary == 1)] = 1
+    combined_binary = np.zeros_like(s_binary)
+    combined_binary[(sxbinary == 1)| (s_binary == 1)] = 1
 
+    # Warp the thresholded binary image to top down view
+    # then send to line for line update
     binary_warped = perspective(combined_binary, src, dst, mtx, dist)
     left_line.process_line(binary_warped)
     right_line.process_line(binary_warped)
 
+    # Visual of histogram, for output image
+    histogram = np.sum(binary_warped[binary_warped.shape[0] // 2:, :], axis=0)
+    histogram[:200] = 0
+    histogram[500:800] = 0
+    histogram[1100:] = 0
+    plt.plot(histogram)
+    # Extrememly hacky, and slowest part of pipeline.
+    # there is a better way, but not my focus at the momment
+    plt.savefig('hist.jpg')
+    plt.cla()
+    histogram = mpimg.imread('hist.jpg')
 
-    color_warp = np.array(cv2.merge((binary_warped * 255, binary_warped * 255, binary_warped * 255)), np.uint8)
+    # create copy of warped image
+    color_warp = np.array(cv2.merge((binary_warped * 25, binary_warped * 25, binary_warped * 255)), np.uint8)
 
     undist = cv2.undistort(img, mtx, dist, None, mtx)
     # Recast the x and y points into usable format for cv2.fillPoly()
@@ -324,21 +448,86 @@ def pipeline(img):
     pts_right = np.array([np.flipud(np.transpose(np.vstack([right_line.bestx, right_line.ploty])))])
     pts = np.hstack((pts_left, pts_right))
 
+    # Test that lane found, avoids pipeline crash
+    if pts.all()==None:
+        return img
+
     # Draw the lane onto the warped blank image
-    cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
+    # clean_color is for final video result
+    # color_warp is for tool in output image that shows the lane line detection
+    # with the lane drawn
+    clean_color = np.zeros_like(color_warp)
+    cv2.fillPoly(color_warp, np.int_([pts]), (0, 180, 0))
+    cv2.fillPoly(clean_color, np.int_([pts]), (0, 180, 0))
 
+    out = np.zeros_like(img)
     # Warp the blank back to original image space using inverse perspective matrix (Minv)
-    newwarp = cv2.warpPerspective(color_warp, Minv, (img.shape[1], img.shape[0]))
-    # Combine the result with the original image
-    cache_image = cv2.addWeighted(undist, 1, newwarp, 0.4, 0)
+    newwarp = cv2.warpPerspective(clean_color, Minv, (img.shape[1], img.shape[0]))
+
+    # Add numerous information fields to output image
+    cv2.putText(out, "Left Line: ", (20, 520),
+                cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
+    cv2.putText(out, "avgrad: " + str(left_line.avgrad), (20, 540),
+                cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
+
+    cv2.putText(out, "currentrad: " + str(left_line.radius_of_curvature[-1]), (20, 560),
+                cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
+
+    cv2.putText(out, "Best Fit: " + str(np.mean(left_line.best_fit)), (20, 580),
+                cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
+    cv2.putText(out, "Base Pos: " + str(left_line.line_base_pos), (20,600),
+                cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
 
 
-    return cache_image
+    cv2.putText(out, "Right Line: ", (20, 620),
+                cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
+    cv2.putText(out, "avgrad: " + str(right_line.avgrad), (20, 640),
+                cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
+
+    cv2.putText(out, "currentrad: "  + str(right_line.radius_of_curvature[-1]), (20, 660),
+                cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
+    cv2.putText(out, "Best Fit: " + str(np.mean(right_line.best_fit)), (20, 680),
+                cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
+    cv2.putText(out, "Base Pos: " + str(right_line.line_base_pos), (20, 700),
+                cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
+
+    # Combine the result with the original imagecd /me
+    cache_image = cv2.addWeighted(undist, 1, newwarp, 0.6, 0)
+
+    rs = cv2.resize(cache_image,(845,475))
+    out[0:rs.shape[0],0:rs.shape[1]] = rs
+    sx = cv2.resize(np.array(cv2.merge((sxbinary*255,sxbinary*255,sxbinary*255)),np.uint8),(435,238))
+    sl = cv2.resize(np.array(cv2.merge((s_binary * 255, s_binary * 255, s_binary * 255)), np.uint8), (435, 238))
+    bw = cv2.resize(color_warp,(435,238))
+    hist = cv2.resize(histogram, (423, 238))
+
+    out[0:sx.shape[0], rs.shape[1]:] = sx
+    out[sx.shape[0]:sx.shape[0]*2, rs.shape[1]:] = sl
+    out[2*sx.shape[0]:sx.shape[0] * 3, rs.shape[1]:] = bw
+    out[2 * sx.shape[0]:sx.shape[0] * 3, int(rs.shape[1]/2):rs.shape[1]] = hist
+
+    cv2.putText(out, "Shane Harmon, Project 4 SDCND", (60, 40),
+                cv2.FONT_HERSHEY_COMPLEX, 0.9, (255, 255, 70), 1)
+    if left_line.detected:
+        cv2.putText(out, "DETECTED", (160, 520),
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (0, 255, 0), 1)
+
+    else:
+        cv2.putText(out, "WINDOW SEARCH", (160, 520),
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 0, 0), 1)
+    if right_line.detected:
+        cv2.putText(out, "DETECTED", (160, 620),
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (0, 255, 0), 1)
+    else:
+        cv2.putText(out, "WINDOW SEARCH", (160, 620),
+                    cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 0, 0), 1)
+
+    return out
 
 
-output = 'output_images/lane2.mp4'
+output = 'output_images/chall.mp4'
 
 
-clip1 = VideoFileClip("project_video.mp4")#.subclip(15,26)
-white_clip = clip1.fl_image(pipeline) #NOTE: this function expects color images!!
+clip1 = VideoFileClip("project_video.mp4").subclip(24,26)
+white_clip = clip1.fl_image(pipeline)  # NOTE: this function expects color images!!
 white_clip.write_videofile(output,audio=False, threads=8,verbose=True)
