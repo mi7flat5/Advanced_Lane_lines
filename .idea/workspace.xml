@@ -2,23 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="b2ba2cc7-7f84-4b91-9848-1da694b53347" name="Default" comment="">
-      <change type="DELETED" beforePath="$PROJECT_DIR$/.ipynb_checkpoints/Perception_Piepeline-checkpoint.ipynb" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/Perception_Piepeline.ipynb" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/output_images/LaneVid.mp4" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/output_images/challenge.mp4" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/output_images/lane.mp4" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/output_images/lane2.mp4" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output_images/cluster_fit.jpg" afterPath="$PROJECT_DIR$/output_images/cluster_fit.jpg" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output_images/combined_thresh.jpg" afterPath="$PROJECT_DIR$/output_images/combined_thresh.jpg" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output_images/dir_thresh.jpg" afterPath="$PROJECT_DIR$/output_images/dir_thresh.jpg" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output_images/final.jpg" afterPath="$PROJECT_DIR$/output_images/final.jpg" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output_images/hist_warped.jpg" afterPath="$PROJECT_DIR$/output_images/hist_warped.jpg" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output_images/hls_thresh.jpg" afterPath="$PROJECT_DIR$/output_images/hls_thresh.jpg" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output_images/mag_thresh.jpg" afterPath="$PROJECT_DIR$/output_images/mag_thresh.jpg" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output_images/poly_fit.jpg" afterPath="$PROJECT_DIR$/output_images/poly_fit.jpg" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output_images/sliding_window.jpg" afterPath="$PROJECT_DIR$/output_images/sliding_window.jpg" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output_images/soebel_threshY.jpg" afterPath="$PROJECT_DIR$/output_images/soebel_threshY.jpg" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output_images/warp_perspective.jpg" afterPath="$PROJECT_DIR$/output_images/warp_perspective.jpg" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Perception_Pipeline.ipynb" afterPath="$PROJECT_DIR$/Perception_Pipeline.ipynb" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Pipeline.py" afterPath="$PROJECT_DIR$/Pipeline.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/README.md" afterPath="$PROJECT_DIR$/README.md" />
     </list>
@@ -37,8 +21,8 @@
       <file leaf-file-name="Pipeline.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Pipeline.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1012">
-              <caret line="46" column="65" lean-forward="true" selection-start-line="0" selection-start-column="0" selection-end-line="533" selection-end-column="70" />
+            <state relative-caret-position="1462">
+              <caret line="519" column="66" lean-forward="false" selection-start-line="519" selection-start-column="66" selection-end-line="519" selection-end-column="66" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -94,8 +78,8 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scratches" />
       <pane id="Scope" />
+      <pane id="Scratches" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -162,7 +146,7 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="3840" y="0" width="3840" height="2160" extended-state="6" />
+    <frame x="4892" y="523" width="3840" height="2160" extended-state="6" />
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.08151042" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -206,73 +190,29 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb">
-      <provider selected="true" editor-type-id="ipnb-editor">
-        <state>
-          <selected id="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb">
-      <provider selected="true" editor-type-id="ipnb-editor">
-        <state>
-          <selected id="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb">
-      <provider selected="true" editor-type-id="ipnb-editor">
-        <state>
-          <selected id="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb">
-      <provider selected="true" editor-type-id="ipnb-editor">
-        <state>
-          <selected id="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb">
-      <provider selected="true" editor-type-id="ipnb-editor">
-        <state>
-          <selected id="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb">
-      <provider selected="true" editor-type-id="ipnb-editor">
-        <state>
-          <selected id="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb">
-      <provider selected="true" editor-type-id="ipnb-editor">
-        <state>
-          <selected id="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb">
-      <provider selected="true" editor-type-id="ipnb-editor">
-        <state>
-          <selected id="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb">
-      <provider selected="true" editor-type-id="ipnb-editor">
-        <state>
-          <selected id="41" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Pipeline.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1012">
-          <caret line="46" column="65" lean-forward="true" selection-start-line="0" selection-start-column="0" selection-end-line="533" selection-end-column="70" />
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb" />
+    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb" />
+    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb" />
+    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb" />
+    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb" />
+    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb" />
+    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb" />
+    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb" />
+    <entry file="file://$PROJECT_DIR$/Perception_Piepeline.ipynb" />
+    <entry file="file://$PROJECT_DIR$/Pipeline.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1462">
+          <caret line="519" column="66" lean-forward="false" selection-start-line="519" selection-start-column="66" selection-end-line="519" selection-end-column="66" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>

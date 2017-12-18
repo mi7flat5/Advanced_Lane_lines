@@ -108,7 +108,7 @@ I verified that my perspective transform was working as expected by drawing the 
 
 The final image of the selction  pipeline looks like this:
 
-![alt text] [image16]
+![alt text][image16]
 #### 4. Line object
 The methods for identifying and fitting pixels to a polynomial curve can be found in the notebook under
 
@@ -141,8 +141,8 @@ This code can be found in lines 257 - 259 in Pipeline.py
 
 #### Here is the result for the project video:
 
-Here's the [project video result](./output_images/Fianl1.mp4)
- [Youtube](https://youtu.be/2EG7aCboAAw)
+Here's the [project video result](./output_images/Final2.mp4)
+ [Youtube](https://youtu.be/DOgUgcw_Q_g)
  
 #### Here is the result for the challenge video:
 

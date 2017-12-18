@@ -26,6 +26,15 @@ dst = np.float32(
      [(img_size[0] / 4), img_size[1]],
      [(img_size[0] * 3 / 4), img_size[1]],
      [(img_size[0] * 3 / 4), 0]])
+imshape = img_shape3
+vertices = np.array([[(100, imshape[0]),
+                          (imshape[1] / 2 + 30, imshape[0] / 2 + 30),
+                          (imshape[1] / 2 + 30, imshape[0] / 2 + 30),
+                          (imshape[1] - 100, imshape[0])]], dtype=np.int32)
+vertices2 = np.array([[(50, imshape[0]),
+                          (0, 0),
+                          (imshape[1]-100, 0),
+                          (imshape[1]-950, imshape[0])]], dtype=np.int32)
 
 # Inverse warp matrix, returns warp to regular perspective
 Minv = cv2.getPerspectiveTransform(dst, src)
@@ -108,7 +117,7 @@ def dir_threshold(img, sobel_kernel=3, thresh=(0, np.pi/2)):
     return binary_output
 
 # COLOR SELECTION - Yellow and White
-def c_f(img, rgb_thresh=(205, 205, 125)):
+def c_f(img, rgb_thresh=(255, 255, 90)):
     # Create an array of zeros same xy size as img, but single channel
     color_select = np.zeros_like(img[:,:,0])
     # Require that each pixel be above all three threshold values in RGB
@@ -122,7 +131,7 @@ def c_f(img, rgb_thresh=(205, 205, 125)):
     # Return the binary image
     return color_select
 
-def b_f(img, rgb_thresh=(155, 145, 20)):
+def b_f(img, rgb_thresh=(150, 100, 20)):
     # Create an array of zeros same xy size as img, but single channel
     color_select = np.zeros_like(img[:,:,0])
     # Require that each pixel be above all three threshold values in RGB
@@ -136,9 +145,9 @@ def b_f(img, rgb_thresh=(155, 145, 20)):
     # Return the binary image
     return color_select & c_f(img)
 
-def color_thresh(img, rgb_thresh=(190, 190, 190)):
+def color_thresh(img, rgb_thresh=(215, 215, 215)):
     # Create an array of zeros same xy size as img, but single channel
-    img = region_of_interest(img)
+    img = region_of_interest(img,vertices)
     color_select = np.zeros_like(img[:,:,0])
     # Require that each pixel be above all three threshold values in RGB
     # above_thresh will now contain a boolean array with "True"
@@ -167,7 +176,7 @@ def edges(im):
     mask = ((gradx == 1)|(grady == 1)) & ((mag_binary == 1) & (dir_binary == 1))
 
     combined[mask] = 1
-    combined = region_of_interest(combined).astype(np.uint8)
+    combined = region_of_interest(combined,vertices).astype(np.uint8)
     return np.logical_or(combined , thing).astype(np.float32)
 
 
@@ -177,24 +186,21 @@ def hls_select(img, thresh=(90, 255)):
     # 2) Apply a threshold to the S channel
     # 3) Return a binary image of threshold result
 
-    img = region_of_interest(img)
+    img = region_of_interest(region_of_interest(img,vertices),vertices2)
     hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
-    s_channel = hls[:, :, 2]
+    s_channel = hls[:, :, 0]
 
-    sthresh_min = 110
-    sthresh_max = 225
+    sthresh_min = 20
+    sthresh_max = 30
     s_output = np.zeros_like(s_channel).astype(np.uint8)
     s_output[(s_channel > sthresh_min) & (s_channel <= sthresh_max)] = 1
-    return  s_output
+    return s_output
 
 
 # Image Masking
-def region_of_interest(img):
+def region_of_interest(img,verts):
     imshape = img.shape
-    vertices = np.array([[(150, imshape[0]),
-                          (imshape[1] / 2 + 50, imshape[0] / 2 + 40),
-                          (imshape[1] / 2 + 50, imshape[0] / 2 + 40),
-                          (imshape[1] - 50, imshape[0])]], dtype=np.int32)
+    vertices = verts
     # defining a blank mask to start with
     mask = np.zeros_like(img)
 
@@ -230,7 +236,10 @@ class Line():
         # radius of curvature of the line in some units
         self.radius_of_curvature = [[0]]
         # distance in meters of vehicle center from the line
-        self.line_base_pos = None
+        if self.side == 'left':
+            self.line_base_pos = 350
+        else:
+            self.line_base_pos = 950
         # difference in fit coefficients between last and new fits
         self.diffs = np.array([0,0,0], dtype='float')
         # x values for detected line pixels
@@ -242,10 +251,11 @@ class Line():
         self.last_fit = None
         ## NEED OUTSIDE
         self.ploty = None
-        self.avg_pool = 3
+        self.avg_pool = 2
         self.maxrad =0
         self.minrad =0
         self.avgrad =0
+        self.other_fit = None
         self.other_fit = None
 
     def test_fit(self, fit,ploty):
@@ -273,15 +283,15 @@ class Line():
             self.last_fit = fit
 
         # Tests for fits that are not similar to current best fit.
-        if np.abs(np.mean(self.best_fit)- np.mean(fit))>200:
+        if np.abs(np.mean(self.best_fit)- np.mean(fit))>150:
             self.detected = False
         if np.mean(fit) <0 :
             self.detected = False
 
         # Tests curve radius for erroneous results
-        if curverad > 2000:
+        if curverad > 7000:
             self.detected = False
-        if curverad < 100:
+        if curverad < 200:
             self.detected = False
 
         # only update with new fit if all tests passed
@@ -320,6 +330,7 @@ class Line():
             self.current_fit.pop()
         else:
             self.best_fit = fit
+        self.best_fit = fit
 
     def process_line(self, bin_img):
 
@@ -356,13 +367,13 @@ class Line():
             # Find the peak of the left and right halves of the histogram
             # These will be the starting point for the left and right lines
             if self.side == 'right':
-                self.midpoint = midpoint = np.int(histogram.shape[0] / 2)
+                self.midpoint = np.int(histogram.shape[0] / 2)
             self.line_base_pos = np.argmax(histogram[self.midpoint:]) + self.midpoint
 
-            # test position of line base, set appropriately if erroneous
-            if self.side == 'left' and self.line_base_pos > 500:
-                self.line_base_pos = 400
-            if self.side == 'right' and self.line_base_pos > 950:
+            ##test position of line base, set appropriately if erroneous
+            if self.side == 'left' and (self.line_base_pos > 500 or self.line_base_pos < 300):
+                self.line_base_pos = 350
+            if self.side == 'right' and (self.line_base_pos < 850):
                 self.line_base_pos = 1000
             x_current = self.line_base_pos
 
@@ -397,10 +408,10 @@ class Line():
             lane_inds = np.concatenate(lane_inds)
             self.allx = nonzerox[lane_inds]
             self.ally = nonzeroy[lane_inds]
-            if len(self.allx)<10:
-                return
-            if len(self.ally)< 10:
-                return
+            # if len(self.allx)<10:
+            #     return
+            # if len(self.ally)< 10:
+            #     return
 
             fit = np.polyfit(self.ally, self.allx, 2)
             ploty = np.linspace(0, bin_img.shape[0] - 1, bin_img.shape[0])
@@ -411,6 +422,7 @@ right_line = Line('right')
 frame_num = 0
 
 def pipeline(img):
+    global frame_num
     # Combination of gradient and color thresholding
     sxbinary = edges(img)
 
@@ -429,9 +441,13 @@ def pipeline(img):
 
     # Visual of histogram, for output image
     histogram = np.sum(binary_warped[binary_warped.shape[0] // 2:, :], axis=0)
-    histogram[:200] = 0
-    histogram[500:800] = 0
-    histogram[1100:] = 0
+
+    # histogram[:200] = 0
+    # histogram[500:800] = 0
+    # histogram[1100:] = 0
+    midpoint = np.int(histogram.shape[0] / 2)
+    left_base = np.argmax(histogram[:midpoint])
+    right_base = np.argmax(histogram[midpoint:]) +midpoint
     plt.plot(histogram)
     # Extrememly hacky, and slowest part of pipeline.
     # there is a better way, but not my focus at the momment
@@ -467,10 +483,10 @@ def pipeline(img):
     # Add numerous information fields to output image
     cv2.putText(out, "Left Line: ", (20, 520),
                 cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
-    cv2.putText(out, "avgrad: " + str(left_line.avgrad), (20, 540),
+    cv2.putText(out, "Average Radius: " + str(left_line.avgrad), (20, 540),
                 cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
 
-    cv2.putText(out, "currentrad: " + str(left_line.radius_of_curvature[-1]), (20, 560),
+    cv2.putText(out, "Current Radius: " + str(left_line.radius_of_curvature[-1]), (20, 560),
                 cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
 
     cv2.putText(out, "Best Fit: " + str(np.mean(left_line.best_fit)), (20, 580),
@@ -481,10 +497,10 @@ def pipeline(img):
 
     cv2.putText(out, "Right Line: ", (20, 620),
                 cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
-    cv2.putText(out, "avgrad: " + str(right_line.avgrad), (20, 640),
+    cv2.putText(out, "Average Radius: " + str(right_line.avgrad), (20, 640),
                 cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
 
-    cv2.putText(out, "currentrad: "  + str(right_line.radius_of_curvature[-1]), (20, 660),
+    cv2.putText(out, "Current Radius: "  + str(right_line.radius_of_curvature[-1]), (20, 660),
                 cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
     cv2.putText(out, "Best Fit: " + str(np.mean(right_line.best_fit)), (20, 680),
                 cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (255, 255, 255), 1)
@@ -506,8 +522,18 @@ def pipeline(img):
     out[2*sx.shape[0]:sx.shape[0] * 3, rs.shape[1]:] = bw
     out[2 * sx.shape[0]:sx.shape[0] * 3, int(rs.shape[1]/2):rs.shape[1]] = hist
 
+    xm_per_pix = 3.7 / 700
+    a = (midpoint -np.abs(right_base - left_base)) * xm_per_pix
+    side = 'right'
+    if a <0:
+        a *= -1
+        side = 'left'
+
     cv2.putText(out, "Shane Harmon, Project 4 SDCND", (60, 40),
                 cv2.FONT_HERSHEY_COMPLEX, 0.9, (255, 255, 70), 1)
+
+    cv2.putText(out, "Car: "+ str(round(a,3))+ "m "+side+" of center" , (60, 440),
+                cv2.FONT_HERSHEY_COMPLEX, 0.9, (255, 255, 255), 1)
     if left_line.detected:
         cv2.putText(out, "DETECTED", (160, 520),
                     cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.9, (0, 255, 0), 1)
@@ -528,6 +554,6 @@ def pipeline(img):
 output = 'output_images/chall.mp4'
 
 
-clip1 = VideoFileClip("project_video.mp4").subclip(24,26)
+clip1 = VideoFileClip("project_video.mp4")#.subclip(38,45)
 white_clip = clip1.fl_image(pipeline)  # NOTE: this function expects color images!!
 white_clip.write_videofile(output,audio=False, threads=8,verbose=True)
